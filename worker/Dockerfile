@@ -1,5 +1,5 @@
 ################### Use Mallob
-FROM mallob-base AS builder
+FROM mallob_base AS builder
 USER root
 
 ################### Extract Mallob in run stage
