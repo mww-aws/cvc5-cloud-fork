@@ -8,5 +8,5 @@ RUN apt-get update \
 # Build Mallob
 RUN git clone https://github.com/cvc5/cvc5.git
 WORKDIR cvc5
-RUN ./configure --auto-download
+RUN ./configure --auto-download --static --static-binary
 RUN cd build && make && cd ..
