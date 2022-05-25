@@ -1,9 +1,9 @@
-################### Use Mallob
-FROM mallob_base AS builder
+################### Use cvc5
+FROM cvc5_base AS builder
 USER root
 
 ################### Extract Mallob in run stage
-FROM satcomp-base:worker AS mallob_liaison
+FROM satcomp-base:worker AS cvc5_liaison
 WORKDIR /
 # Copy mallob
 COPY --from=builder /mallob/build/mallob mallob

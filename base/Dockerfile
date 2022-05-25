@@ -3,10 +3,12 @@ FROM satcomp-common-base-image
 USER root
 #  Install required softwares
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt install -y cmake build-essential zlib1g-dev libopenmpi-dev wget unzip build-essential zlib1g-dev cmake python3 build-essential gfortran wget curl
+    && DEBIAN_FRONTEND=noninteractive apt install -y cmake build-essential zlib1g-dev libopenmpi-dev wget unzip build-essential zlib1g-dev cmake python3 build-essential gfortran wget curl default-jre
 
-# Build Mallob
+# Build cvc5
+RUN /usr/bin/python3 -m pip install toml
 RUN git clone https://github.com/cvc5/cvc5.git
 WORKDIR cvc5
-RUN ./configure --auto-download --static --static-binary
+# Checkout the latest partitioning branch? 
+RUN ./configure.sh --auto-download --static --static-binary
 RUN cd build && make && cd ..

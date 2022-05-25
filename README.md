@@ -21,7 +21,7 @@ Please follow the steps in this repository up to the point at which the base con
 To build the Mallob base container: 
 
 1. Navigate to the `base` subdirectory.
-2. Run `docker build -t mallob_base .`
+2. Run `docker build -t cvc5_base .`
 
 To build the Mallob leader container: 
 

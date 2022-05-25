@@ -1,10 +1,10 @@
 ################### Use Mallob
-FROM mallob_base AS builder
+FROM cvc5_base AS builder
 USER root
 
 
-################### Extract Mallob in run stage
-FROM satcomp-base:leader AS mallob_liaison
+################### Extract cvc5 in run stage
+FROM satcomp-base:leader AS cvc5_liaison
 WORKDIR /
 # Copy mallob and solver scripts
 COPY --from=builder /mallob/build/mallob mallob
