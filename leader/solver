@@ -60,7 +60,7 @@ class Runner:
         
         combined_hostfile = self.create_hostfile(worker_node_ips, self.request_directory)
 
-        run_list = ["/competition/run_mallob.sh"]
+        run_list = ["/competition/run_cvc5.sh"]
         run_list.append(combined_hostfile)
         run_list.append(problem_path)
 

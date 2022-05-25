@@ -7,6 +7,7 @@ RUN apt-get update \
 
 # Build cvc5
 RUN /usr/bin/python3 -m pip install toml
+RUN /usr/bin/python3 -m pip install mpi4py
 RUN git clone https://github.com/cvc5/cvc5.git
 WORKDIR cvc5
 # Checkout the latest partitioning branch? 

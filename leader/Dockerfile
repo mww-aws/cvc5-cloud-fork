@@ -7,10 +7,9 @@ USER root
 FROM satcomp-base:leader AS cvc5_liaison
 WORKDIR /
 # Copy mallob and solver scripts
-COPY --from=builder /mallob/build/mallob mallob
-COPY --from=builder /mallob/build/mallob_sat_process mallob_sat_process
-COPY --chown=ecs-user /run_mallob.sh /competition
+COPY --from=builder /cvc5/build/bin/cvc5 cvc5
+COPY --chown=ecs-user /run_cvc5.sh /competition
 COPY --chown=ecs-user /solver /competition
 USER ecs-user
-RUN chmod +x /competition/run_mallob.sh
+RUN chmod +x /competition/run_cvc5.sh
 RUN chmod +x /competition/solver
