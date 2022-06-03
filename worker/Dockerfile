@@ -5,9 +5,14 @@ USER root
 ################### Extract Mallob in run stage
 FROM satcomp-base:worker AS cvc5_liaison
 WORKDIR /
-# Copy mallob
-COPY --from=builder /mallob/build/mallob mallob
-COPY --from=builder /mallob/build/mallob_sat_process mallob_sat_process
+
+COPY --from=builder /cvc5/build/bin/cvc5 cvc5
+COPY --from=leader /competition/run_cvc5.sh /competition/
+COPY --from=leader /competition/replace_solver.py /competition/
+COPY --from=leader /competition/solver_utils.py /competition/
+RUN chown ecs-user /competition/replace_solver.py 
+RUN chown ecs-user /competition/solver_utils.py
+RUN chown ecs-user /competition/replace_solver.py 
 COPY --chown=ecs-user /worker /competition
 
 RUN chmod +x /competition/worker
