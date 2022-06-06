@@ -1,13 +1,14 @@
 import subprocess
 import os
 import json
+import re
 from pathlib import Path
 
 
 def get_input_json(request_directory):
-  input = os.path.join(request_directory, "input.json")
-  with open(input) as f:
-    return json.loads(f.read())
+    input = os.path.join(request_directory, "input.json")
+    with open(input) as f:
+        return json.loads(f.read())
 
 
 """
@@ -34,19 +35,23 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
                     output_file, smt_file,
                     checks_before_partition, checks_between_partitions,
                     strategy, debug=False):
-  # Build the partition command
-  partition_command = (
-      f"{partitioner} --compute-partitions={number_of_partitions} "
-      f"--lang=smt2 --partition-strategy={strategy} "
-      f"--checks-before-partition={checks_before_partition} "
-      f"--checks-between-partitions={checks_between_partitions} "
-      f"{partitioner_options} {smt_file}"
-  )
+    print("Making partitons! :D")
+    # Build the partition command
+    partition_command = (
+        f"./{partitioner} --compute-partitions={number_of_partitions} "
+        f"--lang=smt2 --partition-strategy={strategy} "
+        f"--checks-before-partition={checks_before_partition} "
+        f"--checks-between-partitions={checks_between_partitions} "
+        f"{partitioner_options} {smt_file}"
+    )
 
-  output = subprocess.check_output(
-      partition_command, shell=True)
-  partitions = output.decode("utf-8").strip().split('\n')
-  return partitions[0: len(partitions) - 1]
+    print(f"partition_command : {partition_command}")
+
+    output = subprocess.check_output(
+        partition_command, shell=True)
+    print("partitioning at least terminated")
+    partitions = output.decode("utf-8").strip().split('\n')
+    return partitions[0: len(partitions) - 1]
 
 
 """
@@ -64,38 +69,39 @@ that is in the list of partitions.
 
 def stitch_partition(partition, j, stitched_directory, parent_file, debug=False):
 
-  new_bench_filename = (
-      f"{stitched_directory}{Path(parent_file).stem}_p{j}.smt2")
-  # TODO: Create the dir in the main file?
+    # Read the original contents in
+    with open(parent_file) as bench_file:
+        bench_contents = bench_file.readlines()
 
-  # Read the original contents in
-  # TODO: MAKE THIS FASTER - should be able to read one and write
-  #     the other at the same time
-  with open(parent_file) as bench_file:
-    bench_contents = bench_file.readlines()
-
-  # Append the cube to the contents and write to the new file.
-  with open(new_bench_filename, 'w+') as new_bench_file:
-    bench_contents[bench_contents.index("(check-sat)\n"):
-                   bench_contents.index("(check-sat)\n")] = \
-        "( assert " + partition + " ) \n"
-    new_bench_file.write("".join(bench_contents))
-  return new_bench_filename
+        # Append the cube to the contents before check-sat
+        bench_contents[bench_contents.index("(check-sat)\n"):
+                       bench_contents.index("(check-sat)\n")] = \
+            "( assert " + partition + " ) \n"
+    return "".join(bench_contents)
 
 
-def run_solver(solver_executable, stitched_file):
-  # Build the partition command
-  solve_command = (
-      f"{solver_executable} --lang=smt2 {stitched_file}"
-  )
+def run_solver(solver_executable, problem_path, partition):
 
-  output = subprocess.check_output(
-      solve_command, shell=True).decode("utf-8").strip()
-  if "unsat" in output:
-    return "unsat"
-  elif "sat" in output:
-    return "sat"
-  elif "unknown" in output:
-    return "unknown"
-  else:
-    return "error"
+    print("Trying to solve!")
+    partition = re.sub("\(", "\(", partition)
+    partition = re.sub("\)", "\)", partition)
+    partition = re.sub("\|", "\|", partition)
+    partition = re.sub("#", "\#", partition)
+    solve_command = (
+        f" printf \"$( sed '/(check-sat)/Q' {problem_path} ) "
+        f"\\n$(echo \\( assert {partition}\\))\\n"
+        f"$(sed -n -e '/(check-sat)/,$p' {problem_path})\\n\" | ./{solver_executable} --lang=smt2 "
+    )
+
+    output = subprocess.check_output(
+        solve_command, shell=True).decode("utf-8").strip()
+    print("actually solved one!")
+    print(f"the output is {output}")
+    if "unsat" in output:
+        return "unsat"
+    elif "sat" in output:
+        return "sat"
+    elif "unknown" in output:
+        return "unknown"
+    else:
+        return "error"

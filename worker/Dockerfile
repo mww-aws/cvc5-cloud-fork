@@ -6,10 +6,12 @@ USER root
 FROM satcomp-base:worker AS cvc5_liaison
 WORKDIR /
 
+RUN /usr/bin/python3.8 -m pip install mpi4py
+
 COPY --from=builder /cvc5/build/bin/cvc5 cvc5
-COPY --from=leader /competition/run_cvc5.sh /competition/
-COPY --from=leader /competition/replace_solver.py /competition/
-COPY --from=leader /competition/solver_utils.py /competition/
+COPY --from=cvc5:leader /competition/run_cvc5.sh /competition/
+COPY --from=cvc5:leader /competition/replace_solver.py /competition/
+COPY --from=cvc5:leader /competition/solver_utils.py /competition/
 RUN chown ecs-user /competition/replace_solver.py 
 RUN chown ecs-user /competition/solver_utils.py
 RUN chown ecs-user /competition/replace_solver.py 

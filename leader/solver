@@ -55,15 +55,16 @@ class Runner:
             return hostfile_path
 
     def get_command(self, input_json):
-        #problem_path = input_json.get("problem_path")
+        problem_path = input_json.get("problem_path")
         worker_node_ips = input_json.get("worker_node_ips", [])
         
         combined_hostfile = self.create_hostfile(worker_node_ips, self.request_directory)
 
         run_list = ["/competition/run_cvc5.sh"]
         run_list.append(combined_hostfile)
-        run_list.append(str((len(worker_node_ips) - 1)*16))
-        #run_list.append(problem_path)
+        # run_list.append(str((len(worker_node_ips) - 1)*16))
+        run_list.append("4")
+        run_list.append(problem_path)
 
         return run_list
 
@@ -91,6 +92,8 @@ if __name__ == "__main__":
     
     input_json = runner.get_input_json()
     cmd = runner.get_command(input_json)
+
+    print("running this command: ", cmd)
     
     output = runner.run(cmd)
     result = Cvc5Parser.get_result(output["stdout"])
