@@ -66,8 +66,9 @@ else:
 #   and interface with it here so that I can have a queue.
 my_partition = comm_world.scatter(my_partitions, root=0)
 
+tmpfilename = stitch_partition(my_partition, problem_path)
 
-result = run_solver(partitioner, problem_path, my_partition)
+result = run_solver(partitioner, tmpfilename)
 print("solver ran")
 
 if (my_rank != 0):

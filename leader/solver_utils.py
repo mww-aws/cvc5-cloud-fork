@@ -3,6 +3,7 @@ import os
 import json
 import re
 from pathlib import Path
+import tempfile
 
 
 def get_input_json(request_directory):
@@ -67,7 +68,7 @@ that is in the list of partitions.
 """
 
 
-def stitch_partition(partition, j, stitched_directory, parent_file, debug=False):
+def stitch_partition(partition, parent_file):
 
     # Read the original contents in
     with open(parent_file) as bench_file:
@@ -77,20 +78,15 @@ def stitch_partition(partition, j, stitched_directory, parent_file, debug=False)
         bench_contents[bench_contents.index("(check-sat)\n"):
                        bench_contents.index("(check-sat)\n")] = \
             "( assert " + partition + " ) \n"
-    return "".join(bench_contents)
+    with tempfile.NamedTemporaryFile(delete=False) as new_bench_file:
+        new_bench_file.write("".join(bench_contents).encode('utf-8'))
+        return new_bench_file.name
 
 
-def run_solver(solver_executable, problem_path, partition):
+def run_solver(solver_executable, stitched_path):
 
-    print("Trying to solve!")
-    partition = re.sub("\(", "\(", partition)
-    partition = re.sub("\)", "\)", partition)
-    partition = re.sub("\|", "\|", partition)
-    partition = re.sub("#", "\#", partition)
     solve_command = (
-        f" printf \"$( sed '/(check-sat)/Q' {problem_path} ) "
-        f"\\n$(echo \\( assert {partition}\\))\\n"
-        f"$(sed -n -e '/(check-sat)/,$p' {problem_path})\\n\" | ./{solver_executable} --lang=smt2 "
+        f" ./{solver_executable} {stitched_path} --lang=smt2 "
     )
 
     output = subprocess.check_output(
