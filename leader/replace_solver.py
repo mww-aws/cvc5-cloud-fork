@@ -31,8 +31,8 @@ partitioner_options = ("--append-learned-literals-to-cubes "
 number_of_partitions = str(num_procs)
 output_file = "partition_file"
 smt_file = problem_path
-checks_before_partition = "5000"
-checks_between_partitions = "0"
+checks_before_partition = "625"
+checks_between_partitions = "625"
 strategy = "heap-trail"
 
 
@@ -51,7 +51,7 @@ if (my_rank == 0):
           f" checks_between {checks_between_partitions}"
           f" strategy {strategy}"
           )
-    my_partitions = make_partitions(partitioner, partitioner_options, number_of_partitions,
+    my_partitions = get_partitions(partitioner, partitioner_options, number_of_partitions,
                                     output_file, smt_file,
                                     checks_before_partition, checks_between_partitions,
                                     strategy)

@@ -12,4 +12,4 @@ RUN git clone https://github.com/cvc5/cvc5.git
 WORKDIR cvc5
 # Checkout the latest partitioning branch? 
 RUN ./configure.sh --auto-download --static --static-binary
-RUN cd build && make -j 28 && cd ..
+RUN cd build && make -j$(nproc) && cd ..

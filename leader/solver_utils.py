@@ -35,8 +35,9 @@ partitions were actually made and return something like a bool.
 def make_partitions(partitioner, partitioner_options, number_of_partitions,
                     output_file, smt_file,
                     checks_before_partition, checks_between_partitions,
-                    strategy, debug=False):
-    print("Making partitons! :D")
+                    strategy):
+
+    print("Making partitons")
     # Build the partition command
     partition_command = (
         f"./{partitioner} --compute-partitions={number_of_partitions} "
@@ -54,6 +55,51 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
     partitions = output.decode("utf-8").strip().split('\n')
     return partitions[0: len(partitions) - 1]
 
+
+def get_partitions(partitioner, partitioner_options, number_of_partitions,
+                   output_file, smt_file,
+                   checks_before_partition, checks_between_partitions,
+                   strategy):
+
+    partitions = make_partitions(partitioner, partitioner_options, number_of_partitions,
+                                 output_file, smt_file,
+                                 checks_before_partition, checks_between_partitions,
+                                 strategy)
+
+    if not len(partitions) > 0:
+        alternate_partitioning_configurations = (
+            get_alternate_partitioning_configurations(checks_before_partition, checks_between_partitions,
+                                                      strategy, 3000)
+        )
+        for apc in alternate_partitioning_configurations:
+            partitions = make_partitions(partitioner, partitioner_options,
+                                         number_of_partitions, output_file, smt_file, *apc)
+            if len(partitions) > 0:
+                break
+    return partitions
+
+
+def get_alternate_partitioning_configurations(prepart_checks, btwpart_checks,
+                                              strategy, backup_prepart_checks):
+  return [
+      [prepart_checks // 2, btwpart_checks // 2, strategy],
+      [prepart_checks // 4, btwpart_checks // 4, strategy],
+      [prepart_checks // 8, btwpart_checks // 8, strategy],
+      [prepart_checks // 16, btwpart_checks // 16, strategy],
+      [prepart_checks // 32, btwpart_checks // 32, strategy],
+      [prepart_checks // 64, btwpart_checks // 64, strategy],
+      [prepart_checks // 128, btwpart_checks // 128, strategy],
+      [prepart_checks // 256, btwpart_checks // 256, strategy],
+      [prepart_checks // 512, btwpart_checks // 512, strategy],
+      [backup_prepart_checks, 1, "decision-trail"],
+      [backup_prepart_checks // 2, 1, "decision-trail"],
+      [backup_prepart_checks // 4, 1, "decision-trail"],
+      [backup_prepart_checks // 8, 1, "decision-trail"],
+      [backup_prepart_checks // 16, 1, "decision-trail"],
+      [backup_prepart_checks // 32, 1, "decision-trail"],
+      [backup_prepart_checks // 64, 1, "decision-trail"],
+      [1, 1, "decision-trail"]  # last resort
+  ]
 
 """
 Make a copy of the partitioned problem and append a cube to it for each cube
