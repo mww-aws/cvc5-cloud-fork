@@ -6,6 +6,7 @@ import subprocess
 import sys
 from mpi4py import MPI
 from solver_utils import *
+from mpi4py.futures import MPICommExecutor
 
 '''
 NOTE: Need to make the solver script call this one, I think.
@@ -18,22 +19,26 @@ num_procs = comm_world.Get_size()
 original_input = ""
 partition_file = ""
 
-# request_directory = sys.argv[1]
-# input_json = get_input_json(request_directory)
-problem_path = sys.argv[1]
-# problem_path = ("/home/amalee/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis"
-#                "/_array_monotonic.i_3_2_2.bpl_11.smt2")
+##### LOCAL STUFF #####
+problem_path = ("/home/amalee/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
+                "/_array_monotonic.i_3_2_2.bpl_11.smt2")
+# "_fragtest_simple.i_4_5_4.bpl_7.smt2")
+partitioner = "/home/amalee/cvc5/build/bin/cvc5"
 
-partitioner = "cvc5"
-# partitioner="/home/amalee/cvc5/build/bin/cvc5"
+
+##### CLOUD STUFF #####
+# problem_path = sys.argv[1]
+# partitioner = "./cvc5"
+
+
 partitioner_options = ("--append-learned-literals-to-cubes "
                        "--produce-learned-literals")
-number_of_partitions = str(num_procs)
+number_of_partitions = str(num_procs - 1)
 output_file = "partition_file"
 smt_file = problem_path
 checks_before_partition = "625"
 checks_between_partitions = "625"
-strategy = "heap-trail"
+strategy = "strict-cube"
 
 
 # Note: should probably do a nonblocking scatter.
@@ -52,9 +57,9 @@ if (my_rank == 0):
           f" strategy {strategy}"
           )
     my_partitions = get_partitions(partitioner, partitioner_options, number_of_partitions,
-                                    output_file, smt_file,
-                                    checks_before_partition, checks_between_partitions,
-                                    strategy)
+                                   output_file, smt_file,
+                                   checks_before_partition, checks_between_partitions,
+                                   strategy)
     print(f" {len(my_partitions)} partitions successfully made!")
 else:
     my_partitions = None
@@ -64,31 +69,41 @@ else:
 # In fact, list slicing does not seem to be support by the
 #   mpi library. Note to self - might need to do a c++ impl
 #   and interface with it here so that I can have a queue.
-my_partition = comm_world.scatter(my_partitions, root=0)
+# my_partition = comm_world.scatter(my_partitions, root=0)
 
-tmpfilename = stitch_partition(my_partition, problem_path)
 
-result = run_solver(partitioner, tmpfilename)
-print("solver ran")
+def run_a_partition(partition):
+    tmpfilename = stitch_partition(partition, problem_path)
+    result = run_solver(partitioner, tmpfilename)
+    return result
 
-if (my_rank != 0):
-    # maybe communicate the outputs from all workers to the main solver
-    print("coom.send")
-    comm_world.send(result, dest=0, tag=99)
-else:
-    print("collecting results")
-    rank = None
-    # Problem: this is blocking and waits for the longest partition.
-    # May be better to monitor the logs.
-    if result == "sat":
-        print("found result SAT")
-    else:
-        for rank in range(1, num_procs):
-            print(f"looking at rank {rank}")
-            result = comm_world.recv(source=rank, tag=99)
-            # Only one sat needs to exist for the whole problem to be sat.
-            if result == "sat":
-                print("found result SAT")
-                break
-        # TODO: return unknowns and errors properly.
-        print("found result UNSAT")
+
+with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
+    if executor is not None:
+        answer = executor.map(run_a_partition, my_partitions)
+        for a in answer:
+            print("test", a)
+
+# print("solver ran")
+#
+# if (my_rank != 0):
+#     # maybe communicate the outputs from all workers to the main solver
+#     print("coom.send")
+#     comm_world.send(result, dest=0, tag=99)
+# else:
+#     print("collecting results")
+#     rank = None
+#     # Problem: this is blocking and waits for the longest partition.
+#     # May be better to monitor the logs.
+#     if result == "sat":
+#         print("found result SAT")
+#     else:
+#         for rank in range(1, num_procs):
+#             print(f"looking at rank {rank}")
+#             result = comm_world.recv(source=rank, tag=99)
+#             # Only one sat needs to exist for the whole problem to be sat.
+#             if result == "sat":
+#                 print("found result SAT")
+#                 break
+#         # TODO: return unknowns and errors properly.
+#         print("found result UNSAT")

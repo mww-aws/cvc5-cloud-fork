@@ -40,7 +40,7 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
     print("Making partitons")
     # Build the partition command
     partition_command = (
-        f"./{partitioner} --compute-partitions={number_of_partitions} "
+        f"{partitioner} --compute-partitions={number_of_partitions} "
         f"--lang=smt2 --partition-strategy={strategy} "
         f"--checks-before-partition={checks_before_partition} "
         f"--checks-between-partitions={checks_between_partitions} "
@@ -132,7 +132,7 @@ def stitch_partition(partition, parent_file):
 def run_solver(solver_executable, stitched_path):
 
     solve_command = (
-        f" ./{solver_executable} {stitched_path} --lang=smt2 "
+        f" {solver_executable} {stitched_path} --lang=smt2 "
     )
 
     output = subprocess.check_output(
