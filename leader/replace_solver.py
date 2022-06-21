@@ -21,8 +21,8 @@ partition_file = ""
 
 ##### LOCAL STUFF #####
 problem_path = ("/home/amalee/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
-                "_fragtest_simple.i_4_5_4.bpl_7.smt2")
-#"_array_monotonic.i_3_2_2.bpl_11.smt2")
+                "_array_monotonic.i_3_2_2.bpl_11.smt2")
+#"_fragtest_simple.i_4_5_4.bpl_7.smt2")
 partitioner = "/home/amalee/cvc5/build/bin/cvc5"
 
 
