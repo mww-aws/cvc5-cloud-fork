@@ -21,8 +21,8 @@ partition_file = ""
 
 ##### LOCAL STUFF #####
 problem_path = ("/home/amalee/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
-                "_array_monotonic.i_3_2_2.bpl_11.smt2")
-# "_fragtest_simple.i_4_5_4.bpl_7.smt2")
+                "_fragtest_simple.i_4_5_4.bpl_7.smt2")
+#"_array_monotonic.i_3_2_2.bpl_11.smt2")
 partitioner = "/home/amalee/cvc5/build/bin/cvc5"
 
 
@@ -80,10 +80,17 @@ def run_a_partition(partition):
 
 with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
     if executor is not None:
-        answer = executor.map(run_a_partition, my_partitions)
+        answer = executor.map(run_a_partition, my_partitions, unordered=True)
         for a in answer:
+            if (a == "sat"):
+                executor.shutdown(wait=False, cancel_futures=True)
+                print("found sat, bailing!!")
+                print("found result SAT")
+                comm_world.Abort()
+                break
             print("test", a)
 
+print("Still executing main thread?")
 # print("solver ran")
 #
 # if (my_rank != 0):
