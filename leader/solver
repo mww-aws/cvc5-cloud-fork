@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import threading
+from tkinter import W
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -70,7 +71,8 @@ class Runner:
         run_list = ["/competition/run_cvc5.sh"]
         run_list.append(combined_hostfile)
         # run_list.append(str((len(worker_node_ips) - 1)*16))
-        run_list.append("4")
+        # TESTING ONLY - REMOVE THIS!!
+        run_list.append("3")
         run_list.append(problem_path)
 
         return run_list
