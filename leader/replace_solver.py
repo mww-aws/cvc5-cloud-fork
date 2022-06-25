@@ -20,15 +20,15 @@ original_input = ""
 partition_file = ""
 
 ##### LOCAL STUFF #####
-problem_path = ("/home/amalee/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
-                "_array_monotonic.i_3_2_2.bpl_11.smt2")
+# problem_path = ("/home/amalee/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
+#                "_array_monotonic.i_3_2_2.bpl_11.smt2")
 #"_fragtest_simple.i_4_5_4.bpl_7.smt2")
-partitioner = "/home/amalee/cvc5/build/bin/cvc5"
+#partitioner = "/home/amalee/cvc5/build/bin/cvc5"
 
 
 ##### CLOUD STUFF #####
-# problem_path = sys.argv[1]
-# partitioner = "./cvc5"
+problem_path = sys.argv[1]
+partitioner = "./cvc5"
 
 
 partitioner_options = ("--append-learned-literals-to-cubes "
