@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.8
+import concurrent.futures
 import json
 import logging
 import os
@@ -20,10 +21,10 @@ original_input = ""
 partition_file = ""
 
 ##### LOCAL STUFF #####
-problem_path = ("/home/amalee/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
+problem_path = ("/home/noetzli/benchmarks/non_incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
                 "_array_monotonic.i_3_2_2.bpl_11.smt2")
 #"_fragtest_simple.i_4_5_4.bpl_7.smt2")
-partitioner = "/home/amalee/cvc5/build/bin/cvc5"
+partitioner = "cvc5/build-clang/bin/cvc5"
 
 
 ##### CLOUD STUFF #####
@@ -72,25 +73,35 @@ else:
 # my_partition = comm_world.scatter(my_partitions, root=0)
 
 
-def run_a_partition(partition):
+def run_a_partition(partition, timeout):
     tmpfilename = stitch_partition(partition, problem_path)
-    result = run_solver(partitioner, tmpfilename)
-    return result
+    result = run_solver(partitioner, tmpfilename, timeout)
+    return (partition, timeout, result)
 
 
 with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
+    initial_timeout = 2000
     if executor is not None:
-        answer = executor.map(run_a_partition, my_partitions, unordered=True)
-        for a in answer:
-            if (a == "sat"):
-                executor.shutdown(wait=False, cancel_futures=True)
-                print("found sat, bailing!!")
-                print("found result SAT")
-                comm_world.Abort()
-                break
-            print("test", a)
+        not_done = set(executor.submit(run_a_partition, partition, initial_timeout) for partition in my_partitions)
+        while not_done:
+            print(f"Waiting for {len(not_done)} tasks to finish...")
+            done, not_done = concurrent.futures.wait(
+                not_done, return_when=concurrent.futures.FIRST_COMPLETED)
+            for task in done:
+                partition, timeout, answer = task.result()
+                if answer == "sat":
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    print("found sat, bailing!!")
+                    print("found result SAT")
+                    comm_world.Abort()
+                    break
+                elif answer == "timeout":
+                    print(f"Timeout with {timeout}, rescheduling")
+                    task = executor.submit(run_a_partition, partition, timeout * 2)
+                    not_done.add(task)
 
-print("Still executing main thread?")
+        print("found result UNSAT")
+
 # print("solver ran")
 #
 # if (my_rank != 0):

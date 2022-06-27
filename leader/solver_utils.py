@@ -129,20 +129,25 @@ def stitch_partition(partition, parent_file):
         return new_bench_file.name
 
 
-def run_solver(solver_executable, stitched_path):
+def run_solver(solver_executable, stitched_path, timeout):
 
-    solve_command = (
-        f" {solver_executable} {stitched_path} --lang=smt2 "
-    )
-
-    output = subprocess.check_output(
-        solve_command, shell=True).decode("utf-8").strip()
-    print("actually solved one!")
+    solve_command = [
+        solver_executable,
+        stitched_path,
+        "--lang=smt2",
+        f"--tlimit={timeout}",
+    ]
+    output = subprocess.run(
+        solve_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT).stdout.decode("utf-8").strip()
     print(f"the output is {output}")
     if "unsat" in output:
         return "unsat"
     elif "sat" in output:
         return "sat"
+    elif "timeout" in output:
+        return "timeout"
     elif "unknown" in output:
         return "unknown"
     else:
