@@ -68,7 +68,7 @@ def get_partitions(partitioner, partitioner_options, number_of_partitions,
 
     if not len(partitions) > 0:
         alternate_partitioning_configurations = (
-            get_alternate_partitioning_configurations(checks_before_partition, checks_between_partitions,
+            get_alternate_partitioning_configurations(int(checks_before_partition), int(checks_between_partitions),
                                                       strategy, 3000)
         )
         for apc in alternate_partitioning_configurations:
