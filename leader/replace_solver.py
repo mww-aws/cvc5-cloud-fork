@@ -42,7 +42,7 @@ strategy = "strict-cube"
 
 
 # Note: should probably do a nonblocking scatter.
-
+early_termination = False
 if (my_rank == 0):
     print(f"my rank is {my_rank} and I am going to partition {problem_path}")
     # partition the input
@@ -60,6 +60,16 @@ if (my_rank == 0):
                                    output_file, smt_file,
                                    checks_before_partition, checks_between_partitions,
                                    strategy)
+    if my_partitions == "sat":
+        print("found result SAT")
+        comm_world.Abort()
+        sys.exit()
+
+    elif my_partitions == "unsat":
+        print("found result UNSAT")
+        comm_world.Abort()
+        sys.exit()
+
     print(f" {len(my_partitions)} partitions successfully made!")
 else:
     my_partitions = None
@@ -70,6 +80,7 @@ else:
 #   mpi library. Note to self - might need to do a c++ impl
 #   and interface with it here so that I can have a queue.
 # my_partition = comm_world.scatter(my_partitions, root=0)
+
 
 
 def run_a_partition(partition):

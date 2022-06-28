@@ -53,7 +53,13 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
         partition_command, shell=True)
     print("partitioning at least terminated")
     partitions = output.decode("utf-8").strip().split('\n')
-    return partitions[0: len(partitions) - 1]
+    psize = len(partitions)
+    if partitions[-1] == "sat":
+        return "sat"
+    elif len(partitions) == 1 and partitions[-1] == "unsat":
+        return "unsat"
+    else:
+        return partitions[0: len(partitions) - 1]
 
 
 def get_partitions(partitioner, partitioner_options, number_of_partitions,
@@ -65,6 +71,9 @@ def get_partitions(partitioner, partitioner_options, number_of_partitions,
                                  output_file, smt_file,
                                  checks_before_partition, checks_between_partitions,
                                  strategy)
+
+    if partitions == "sat" or partitions == "unsat":
+        return partitions 
 
     if not len(partitions) > 0:
         alternate_partitioning_configurations = (
