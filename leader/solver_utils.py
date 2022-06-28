@@ -75,7 +75,7 @@ def get_partitions(partitioner, partitioner_options, number_of_partitions,
     if partitions == "sat" or partitions == "unsat":
         return partitions 
 
-    if not len(partitions) > 0:
+    if not len(partitions) > 1:
         alternate_partitioning_configurations = (
             get_alternate_partitioning_configurations(int(checks_before_partition), int(checks_between_partitions),
                                                       strategy, 3000)
@@ -83,7 +83,7 @@ def get_partitions(partitioner, partitioner_options, number_of_partitions,
         for apc in alternate_partitioning_configurations:
             partitions = make_partitions(partitioner, partitioner_options,
                                          number_of_partitions, output_file, smt_file, *apc)
-            if len(partitions) > 0:
+            if len(partitions) > 1:
                 break
     return partitions
 
