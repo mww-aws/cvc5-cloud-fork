@@ -70,6 +70,11 @@ if (my_rank == 0):
         comm_world.Abort()
         sys.exit()
 
+    elif my_partitions == "unknown":
+        print("found result UNKNOWN")
+        comm_world.Abort()
+        sys.exit()
+
     print(f" {len(my_partitions)} partitions successfully made!")
 else:
     my_partitions = None

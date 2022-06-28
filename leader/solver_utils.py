@@ -58,6 +58,8 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
         return "sat"
     elif len(partitions) == 1 and partitions[-1] == "unsat":
         return "unsat"
+    elif len(partitions) == 1 and partitions[-1] == "unknown":
+        return "unknown"
     else:
         return partitions[0: len(partitions) - 1]
 
@@ -83,6 +85,10 @@ def get_partitions(partitioner, partitioner_options, number_of_partitions,
         for apc in alternate_partitioning_configurations:
             partitions = make_partitions(partitioner, partitioner_options,
                                          number_of_partitions, output_file, smt_file, *apc)
+            if partitions == "sat" or partitions == "unsat":
+                return partitions 
+            if partitions == "unknown":
+                continue
             if len(partitions) > 1:
                 break
     return partitions
