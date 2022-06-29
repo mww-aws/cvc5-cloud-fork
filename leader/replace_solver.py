@@ -104,7 +104,6 @@ with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
             for task in done:
                 partition, timeout, answer = task.result()
                 if answer == "sat":
-                    executor.shutdown(wait=False, cancel_futures=True)
                     print("found result SAT")
                     comm_world.Abort()
                     break
