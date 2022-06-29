@@ -3,6 +3,7 @@ import concurrent.futures
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 from mpi4py import MPI
@@ -26,63 +27,76 @@ problem_path = ("/home/noetzli/benchmarks/non_incremental/QF_LRA/2017-Heizmann-U
 #"_fragtest_simple.i_4_5_4.bpl_7.smt2")
 partitioner = "cvc5/build-clang/bin/cvc5"
 
-
 ##### CLOUD STUFF #####
 # problem_path = sys.argv[1]
 # partitioner = "./cvc5"
 
+# The timeout used for the first generation of paritions
+initial_timeout = 2000
+# The factor to scale the timeout by
+timeout_scale_factor = 2
 
 partitioner_options = ("--append-learned-literals-to-cubes "
                        "--produce-learned-literals")
 number_of_partitions = str(num_procs - 1)
-output_file = "partition_file"
-smt_file = problem_path
 checks_before_partition = "625"
 checks_between_partitions = "625"
 strategy = "strict-cube"
 
-
-# Note: should probably do a nonblocking scatter.
-
-if (my_rank == 0):
-    print(f"my rank is {my_rank} and I am going to partition {problem_path}")
-    # partition the input
-    print(f"Hello from the partitioning node \n"
-          f" partitioner {partitioner} "
-          f" partitioner_options {partitioner_options}"
-          f" num partitions {number_of_partitions}"
-          f" output_file {output_file}"
-          f" smt_file {smt_file}"
-          f" checks_before {checks_before_partition}"
-          f" checks_between {checks_between_partitions}"
-          f" strategy {strategy}"
-          )
-    my_partitions = get_partitions(partitioner, partitioner_options, number_of_partitions,
-                                   output_file, smt_file,
-                                   checks_before_partition, checks_between_partitions,
-                                   strategy)
-    print(f" {len(my_partitions)} partitions successfully made!")
-else:
-    my_partitions = None
-
-# Now scatter partitions to the workers.
-# For now, num partitions = num workers.
-# In fact, list slicing does not seem to be support by the
-#   mpi library. Note to self - might need to do a c++ impl
-#   and interface with it here so that I can have a queue.
-# my_partition = comm_world.scatter(my_partitions, root=0)
-
-
-def run_a_partition(partition, timeout):
-    tmpfilename = stitch_partition(partition, problem_path)
-    result = run_solver(partitioner, tmpfilename, timeout)
+def run_a_partition(partition: list, solver_opts: list, timeout):
+    smt_partition = stitch_partition(partition, problem_path)
+    result = run_solver(partitioner, smt_partition, solver_opts, timeout)
+    os.remove(smt_partition)
     return (partition, timeout, result)
 
+def print_result(result):
+    if result == "sat":
+        print("found result SAT")
+        comm_world.Abort()
+    elif result == "unsat":
+        print("found result UNSAT")
+        comm_world.Abort()
+    elif result == "unknown":
+        print("found result UNKNOWN")
+        comm_world.Abort()
+
+def get_logic(file):
+    with open(file, "r") as f:
+        content = f.read()
+        m = re.search("set-logic ([A-Z_]+)", content) 
+        if m: 
+            return m[1]
+    return None
+
+def get_options_for_logic(logic: str):
+    result = []
+    # TODO: set options depending on logic
+    print(f"  Solver options for logic: {result}")
+    return result
 
 with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-    initial_timeout = 2000
     if executor is not None:
-        not_done = set(executor.submit(run_a_partition, partition, initial_timeout) for partition in my_partitions)
+        print(f"Solving problem {problem_path}...")
+        print(f"  Partitioner: {partitioner}")
+        print(f"  Options: {partitioner_options}")
+        print(f"  Number of partitions: {number_of_partitions}")
+        print(f"  Checks before: {checks_before_partition}")
+        print(f"  Checks between: {checks_between_partitions}")
+        print(f"  Strategy: {strategy}")
+
+        logic = get_logic(problem_path)
+        print(f"  Logic: {logic}")
+        solver_opts = get_options_for_logic(logic)
+
+        # Create initial partitions
+        partitions = get_partitions(partitioner, partitioner_options, number_of_partitions,
+                                    problem_path, checks_before_partition, checks_between_partitions,
+                                    strategy)
+        if partitions in ["sat", "unsat", "unknown"]:
+            print_result(partitions)
+        print(f" {len(partitions)} partitions successfully made!")
+
+        not_done = set(executor.submit(run_a_partition, [partition], solver_opts, initial_timeout) for partition in partitions)
         while not_done:
             print(f"Waiting for {len(not_done)} tasks to finish...")
             done, not_done = concurrent.futures.wait(
@@ -91,37 +105,29 @@ with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
                 partition, timeout, answer = task.result()
                 if answer == "sat":
                     executor.shutdown(wait=False, cancel_futures=True)
-                    print("found sat, bailing!!")
                     print("found result SAT")
                     comm_world.Abort()
                     break
-                elif answer == "timeout":
-                    print(f"Timeout with {timeout}, rescheduling")
-                    task = executor.submit(run_a_partition, partition, timeout * 2)
-                    not_done.add(task)
+                elif answer in ["timeout", "unknown"]:
+                    print(f"Timeout with {timeout}, repartitioning and rescheduling")
+
+                    # Create subpartitions
+                    smt_partition = stitch_partition(partition, problem_path)
+                    subpartitions = get_partitions(partitioner, partitioner_options, number_of_partitions,
+                                                   smt_partition, checks_before_partition, checks_between_partitions,
+                                                   strategy)
+                    os.remove(smt_partition)
+                    if subpartitions == "unsat":
+                        print(f"Partitioner found unsat, skipping subpartitions")
+                        continue
+                    elif subpartitions in ["sat", "unknown"]:
+                        print_result(subpartitions)
+
+                    subpartitions = [partition + [subpartition] for subpartition in subpartitions]
+                    print(f" {len(subpartitions)} subpartitions successfully made!")
+
+                    for subpartition in subpartitions:
+                        task = executor.submit(run_a_partition, subpartition, solver_opts, timeout * timeout_scale_factor)
+                        not_done.add(task)
 
         print("found result UNSAT")
-
-# print("solver ran")
-#
-# if (my_rank != 0):
-#     # maybe communicate the outputs from all workers to the main solver
-#     print("coom.send")
-#     comm_world.send(result, dest=0, tag=99)
-# else:
-#     print("collecting results")
-#     rank = None
-#     # Problem: this is blocking and waits for the longest partition.
-#     # May be better to monitor the logs.
-#     if result == "sat":
-#         print("found result SAT")
-#     else:
-#         for rank in range(1, num_procs):
-#             print(f"looking at rank {rank}")
-#             result = comm_world.recv(source=rank, tag=99)
-#             # Only one sat needs to exist for the whole problem to be sat.
-#             if result == "sat":
-#                 print("found result SAT")
-#                 break
-#         # TODO: return unknowns and errors properly.
-#         print("found result UNSAT")

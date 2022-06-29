@@ -33,8 +33,7 @@ partitions were actually made and return something like a bool.
 
 
 def make_partitions(partitioner, partitioner_options, number_of_partitions,
-                    output_file, smt_file,
-                    checks_before_partition, checks_between_partitions,
+                    smt_file, checks_before_partition, checks_between_partitions,
                     strategy):
 
     print("Making partitons")
@@ -47,34 +46,45 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
         f"{partitioner_options} {smt_file}"
     )
 
-    print(f"partition_command : {partition_command}")
-
     output = subprocess.check_output(
         partition_command, shell=True)
     print("partitioning at least terminated")
     partitions = output.decode("utf-8").strip().split('\n')
-    return partitions[0: len(partitions) - 1]
+    psize = len(partitions)
+    if partitions[-1] == "sat":
+        return "sat"
+    elif len(partitions) == 1 and partitions[-1] == "unsat":
+        return "unsat"
+    elif len(partitions) == 1 and partitions[-1] == "unknown":
+        return "unknown"
+    else:
+        return partitions[0: len(partitions) - 1]
 
 
 def get_partitions(partitioner, partitioner_options, number_of_partitions,
-                   output_file, smt_file,
-                   checks_before_partition, checks_between_partitions,
+                   smt_file, checks_before_partition, checks_between_partitions,
                    strategy):
 
     partitions = make_partitions(partitioner, partitioner_options, number_of_partitions,
-                                 output_file, smt_file,
-                                 checks_before_partition, checks_between_partitions,
+                                 smt_file, checks_before_partition, checks_between_partitions,
                                  strategy)
 
-    if not len(partitions) > 0:
+    if partitions == "sat" or partitions == "unsat":
+        return partitions 
+
+    if not len(partitions) > 1:
         alternate_partitioning_configurations = (
-            get_alternate_partitioning_configurations(checks_before_partition, checks_between_partitions,
+            get_alternate_partitioning_configurations(int(checks_before_partition), int(checks_between_partitions),
                                                       strategy, 3000)
         )
         for apc in alternate_partitioning_configurations:
             partitions = make_partitions(partitioner, partitioner_options,
-                                         number_of_partitions, output_file, smt_file, *apc)
-            if len(partitions) > 0:
+                                         number_of_partitions, smt_file, *apc)
+            if partitions == "sat" or partitions == "unsat":
+                return partitions 
+            if partitions == "unknown":
+                continue
+            if len(partitions) > 1:
                 break
     return partitions
 
@@ -114,29 +124,29 @@ that is in the list of partitions.
 """
 
 
-def stitch_partition(partition, parent_file):
+def stitch_partition(partition: list, parent_file):
 
     # Read the original contents in
     with open(parent_file) as bench_file:
         bench_contents = bench_file.readlines()
 
         # Append the cube to the contents before check-sat
-        bench_contents[bench_contents.index("(check-sat)\n"):
-                       bench_contents.index("(check-sat)\n")] = \
-            "( assert " + partition + " ) \n"
+        check_sat_index = bench_contents.index("(check-sat)\n")
+        bench_contents[check_sat_index:check_sat_index] = \
+            [f"(assert {cube})\n" for cube in partition]
     with tempfile.NamedTemporaryFile(delete=False) as new_bench_file:
         new_bench_file.write("".join(bench_contents).encode('utf-8'))
         return new_bench_file.name
 
 
-def run_solver(solver_executable, stitched_path, timeout):
+def run_solver(solver_executable, stitched_path, solver_opts: list, timeout):
 
     solve_command = [
         solver_executable,
         stitched_path,
         "--lang=smt2",
         f"--tlimit={timeout}",
-    ]
+    ] + solver_opts
     output = subprocess.run(
         solve_command,
         stdout=subprocess.PIPE,
