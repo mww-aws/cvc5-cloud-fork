@@ -21,15 +21,8 @@ num_procs = comm_world.Get_size()
 original_input = ""
 partition_file = ""
 
-##### LOCAL STUFF #####
-problem_path = ("/home/noetzli/benchmarks/non_incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/"
-                "_array_monotonic.i_3_2_2.bpl_11.smt2")
-#"_fragtest_simple.i_4_5_4.bpl_7.smt2")
-partitioner = "cvc5/build-clang/bin/cvc5"
-
-##### CLOUD STUFF #####
-# problem_path = sys.argv[1]
-# partitioner = "./cvc5"
+partitioner = sys.argv[1]
+problem_path = sys.argv[2]
 
 # The timeout used for the first generation of paritions
 initial_timeout = 2000
