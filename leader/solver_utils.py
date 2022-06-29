@@ -33,8 +33,7 @@ partitions were actually made and return something like a bool.
 
 
 def make_partitions(partitioner, partitioner_options, number_of_partitions,
-                    output_file, smt_file,
-                    checks_before_partition, checks_between_partitions,
+                    smt_file, checks_before_partition, checks_between_partitions,
                     strategy):
 
     print("Making partitons")
@@ -46,8 +45,6 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
         f"--checks-between-partitions={checks_between_partitions} "
         f"{partitioner_options} {smt_file}"
     )
-
-    print(f"partition_command : {partition_command}")
 
     output = subprocess.check_output(
         partition_command, shell=True)
@@ -65,13 +62,11 @@ def make_partitions(partitioner, partitioner_options, number_of_partitions,
 
 
 def get_partitions(partitioner, partitioner_options, number_of_partitions,
-                   output_file, smt_file,
-                   checks_before_partition, checks_between_partitions,
+                   smt_file, checks_before_partition, checks_between_partitions,
                    strategy):
 
     partitions = make_partitions(partitioner, partitioner_options, number_of_partitions,
-                                 output_file, smt_file,
-                                 checks_before_partition, checks_between_partitions,
+                                 smt_file, checks_before_partition, checks_between_partitions,
                                  strategy)
 
     if partitions == "sat" or partitions == "unsat":
@@ -84,7 +79,7 @@ def get_partitions(partitioner, partitioner_options, number_of_partitions,
         )
         for apc in alternate_partitioning_configurations:
             partitions = make_partitions(partitioner, partitioner_options,
-                                         number_of_partitions, output_file, smt_file, *apc)
+                                         number_of_partitions, smt_file, *apc)
             if partitions == "sat" or partitions == "unsat":
                 return partitions 
             if partitions == "unknown":
@@ -129,35 +124,40 @@ that is in the list of partitions.
 """
 
 
-def stitch_partition(partition, parent_file):
+def stitch_partition(partition: list, parent_file):
 
     # Read the original contents in
     with open(parent_file) as bench_file:
         bench_contents = bench_file.readlines()
 
         # Append the cube to the contents before check-sat
-        bench_contents[bench_contents.index("(check-sat)\n"):
-                       bench_contents.index("(check-sat)\n")] = \
-            "( assert " + partition + " ) \n"
+        check_sat_index = bench_contents.index("(check-sat)\n")
+        bench_contents[check_sat_index:check_sat_index] = \
+            [f"(assert {cube})\n" for cube in partition]
     with tempfile.NamedTemporaryFile(delete=False) as new_bench_file:
         new_bench_file.write("".join(bench_contents).encode('utf-8'))
         return new_bench_file.name
 
 
-def run_solver(solver_executable, stitched_path):
+def run_solver(solver_executable, stitched_path, solver_opts: list, timeout):
 
-    solve_command = (
-        f" {solver_executable} {stitched_path} --lang=smt2 "
-    )
-
-    output = subprocess.check_output(
-        solve_command, shell=True).decode("utf-8").strip()
-    print("actually solved one!")
+    solve_command = [
+        solver_executable,
+        stitched_path,
+        "--lang=smt2",
+        f"--tlimit={timeout}",
+    ] + solver_opts
+    output = subprocess.run(
+        solve_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT).stdout.decode("utf-8").strip()
     print(f"the output is {output}")
     if "unsat" in output:
         return "unsat"
     elif "sat" in output:
         return "sat"
+    elif "timeout" in output:
+        return "timeout"
     elif "unknown" in output:
         return "unknown"
     else:
