@@ -18,9 +18,6 @@ comm_world = MPI.COMM_WORLD
 my_rank = comm_world.Get_rank()
 num_procs = comm_world.Get_size()
 
-original_input = ""
-partition_file = ""
-
 partitioner = sys.argv[1]
 problem_path = sys.argv[2]
 
