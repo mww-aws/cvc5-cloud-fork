@@ -10,6 +10,7 @@ RUN /usr/bin/python3.8 -m pip install mpi4py
 
 # Copy mallob and solver scripts
 COPY --from=builder /cvc5/build/bin/cvc5 cvc5
+COPY --from=builder /cvc5/build/bin/cvc5 /competition/cvc5
 # COPY --chown=ecs-user ./test.smt2 test.smt2
 COPY --chown=ecs-user ./run_cvc5.sh /competition/
 COPY --chown=ecs-user ./replace_solver.py /competition/

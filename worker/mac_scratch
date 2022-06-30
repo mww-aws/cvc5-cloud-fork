@@ -24,3 +24,12 @@ sed -n -e '/(check-sat)/,$p' 6moves_mti_6-Atd_00004_bmc.smt2
 ./create-solver-infrastructure --profile blab --project cvc5-cloud --instance m6i.4xlarge --memory 61000 --ami ami-022ed07b73d6b46b2 --update True
 
 printf "$( sed '/(check-sat)/Q' 6moves_mti_6-Atd_00004_bmc.smt2 )\n$(echo mything)\n$(sed -n -e '/(check-sat)/,$p' 6moves_mti_6-Atd_00004_bmc.smt2)\n"  | ./cvc5/build/bin/cvc5
+
+
+./send_message --profile blab --location  s3://127312632904-us-west-1-satcompbucket/_functions1.i_3_5_2.bpl_11.smt2 --workers 8
+./send_message --profile blab --location  s3://127312632904-us-west-1-satcompbucket/10007.corecstrs.readable.smt2 --workers 8
+./send_message --profile blab --location s3://127312632904-us-west-1-satcompbucket/130.corecstrs.readable.smt2 --workers 8
+./send_message --profile blab --location s3://127312632904-us-west-1-satcompbucket/bench_10002.smt2 --workers 8
+./send_message --profile blab --location s3://127312632904-us-west-1-satcompbucket/digital-estimation-convergence-bmc-fwd.smt2 --workers 8
+./send_message --profile blab --location s3://127312632904-us-west-1-satcompbucket/extensions.smt2 --workers 8
+./send_message --profile blab --location s3://127312632904-us-west-1-satcompbucket/modulus_true-unreach-call_true-no-overflow.i_242.smt2 --workers 8

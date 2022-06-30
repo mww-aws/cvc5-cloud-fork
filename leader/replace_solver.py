@@ -22,13 +22,13 @@ partitioner = sys.argv[1]
 problem_path = sys.argv[2]
 
 # The timeout used for the first generation of paritions
-initial_timeout = 2000
+initial_timeout = 30000
 # The factor to scale the timeout by
 timeout_scale_factor = 2
 
 partitioner_options = ("--append-learned-literals-to-cubes "
                        "--produce-learned-literals")
-number_of_partitions = str(num_procs - 1)
+number_of_partitions = 8
 checks_before_partition = "625"
 checks_between_partitions = "625"
 strategy = "strict-cube"
