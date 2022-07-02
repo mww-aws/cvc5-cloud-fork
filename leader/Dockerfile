@@ -19,4 +19,6 @@ COPY --chown=ecs-user /solver /competition
 USER ecs-user
 RUN chmod +x /competition/run_cvc5.sh
 RUN chmod +x /competition/solver
+RUN chmod +x /competition/solver_utils.py
+RUN chmod +x /competition/replace_solver.py
 # RUN ./cvc5 --compute-partitions=32 --lang=smt2 --partition-strategy=heap-trail --checks-before-partition=5000 --checks-between-partitions=0 --append-learned-literals-to-cubes --produce-learned-literals test.smt2
