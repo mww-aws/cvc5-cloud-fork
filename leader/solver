@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 import threading
-# from tkinter import W
+import multiprocessing
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -71,9 +71,8 @@ class Runner:
         run_list = ["/competition/run_cvc5.sh"]
         run_list.append(combined_hostfile)
         print("len of worker node ips = ", worker_node_ips)
-        run_list.append("24")
-        import multiprocessing
         print("num cores " , multiprocessing.cpu_count())
+        run_list.append(str(multiprocessing.cpu_count() * (len(worker_node_ips) - 1)))
 
         # TESTING ONLY - REMOVE THIS!!
         # run_list.append("3")

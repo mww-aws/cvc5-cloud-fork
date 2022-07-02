@@ -9,6 +9,7 @@ WORKDIR /
 RUN /usr/bin/python3.8 -m pip install mpi4py
 
 COPY --from=builder /cvc5/build/bin/cvc5 cvc5
+COPY --from=builder /cvc5/build/bin/cvc5 /competition/cvc5
 COPY --from=cvc5:leader /competition/run_cvc5.sh /competition/
 COPY --from=cvc5:leader /competition/replace_solver.py /competition/
 COPY --from=cvc5:leader /competition/solver_utils.py /competition/
