@@ -72,7 +72,7 @@ class Runner:
         run_list.append(combined_hostfile)
         print("len of worker node ips = ", worker_node_ips)
         print("num cores " , multiprocessing.cpu_count())
-        run_list.append(str(multiprocessing.cpu_count() * (len(worker_node_ips) - 1)))
+        run_list.append(str(multiprocessing.cpu_count() * (len(worker_node_ips))))
 
         # TESTING ONLY - REMOVE THIS!!
         # run_list.append("3")
