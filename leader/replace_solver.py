@@ -9,6 +9,7 @@ import sys
 from mpi4py import MPI
 from solver_utils import *
 from mpi4py.futures import MPICommExecutor
+from collections import defaultdict
 
 '''
 NOTE: Need to make the solver script call this one, I think.
@@ -60,7 +61,33 @@ def get_logic(file):
 
 def get_options_for_logic(logic: str):
     result = []
-    # TODO: set options depending on logic
+    if logic == "QF_LRA":
+        result = ["--no-restrict-pivots", "--use-soi", "--new-prop"]
+    elif logic == "QF_NIA":
+        result = ["--nl-ext-tplanes"]
+    elif logic == "UFBV":
+        result = ["--finite-model-find"]
+    elif logic == "BV":
+        result = ["--full-saturate-quant", "--decision=internal"]
+    elif logic in ["LIA", "LRA", "NIA", "NRA"]:
+        result = ["--full-saturate-quant", "--cegqi-nested-qe", "--decision=internal"]
+    elif not logic.startswith("QF_"):
+        result = ["--full-saturate-quant", "--fp-exp"]
+    elif logic == "QF_AUFBV":
+        result = ["--decision=stoponly"]
+    elif logic == "QF_ABV":
+        result = ["--arrays-weak-equiv"]
+    elif logic in ["QF_AUFLIA", "QF_AUFNIA"]:
+        result = ["--no-arrays-eager-index", "--arrays-eager-lemmas", "--decision=justification"]
+    elif logic == "QF_AX":
+        result = ["--no-arrays-eager-index", "--arrays-eager-lemmas", "--decision=internal"]
+    elif logic == "QF_ALIA":
+        result = ["--no-arrays-eager-index", "--arrays-eager-lemmas", "--decision=stoponly"]
+    elif logic in ["QF_S", "QF_SLIA"]:
+        result = ["--strings-exp"]
+    elif "FP" in logic:
+        result = ["--fp-exp"]
+
     print(f"  Solver options for logic: {result}")
     return result
 
@@ -87,12 +114,17 @@ with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
         print(f" {len(partitions)} partitions successfully made!")
 
         not_done = set(executor.submit(run_a_partition, [partition], solver_opts, initial_timeout) for partition in partitions)
+        generations = defaultdict(lambda: 0)
+        generations[1] = len(not_done)
         while not_done:
             print(f"Waiting for {len(not_done)} tasks to finish...")
+            for gen, num_tasks in generations.items():
+                print(f"  Generation {gen}: {num_tasks}")
             done, not_done = concurrent.futures.wait(
                 not_done, return_when=concurrent.futures.FIRST_COMPLETED)
             for task in done:
                 partition, timeout, answer = task.result()
+                generations[len(partition)] -= 1
                 if answer == "sat":
                     print("found result SAT")
                     comm_world.Abort()
@@ -113,10 +145,14 @@ with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
                         print_result(subpartitions)
 
                     subpartitions = [partition + [subpartition] for subpartition in subpartitions]
-                    print(f" {len(subpartitions)} subpartitions successfully made!")
+                    print(f"  {len(subpartitions)} subpartitions successfully made!")
 
                     for subpartition in subpartitions:
                         task = executor.submit(run_a_partition, subpartition, solver_opts, timeout * timeout_scale_factor)
                         not_done.add(task)
+                    print(f"  Subparitions submitted")
+
+                    if len(subpartitions) > 0:
+                        generations[len(subpartitions[0])] += len(subpartitions)
 
         print("found result UNSAT")
