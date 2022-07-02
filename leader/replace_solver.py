@@ -61,7 +61,33 @@ def get_logic(file):
 
 def get_options_for_logic(logic: str):
     result = []
-    # TODO: set options depending on logic
+    if logic == "QF_LRA":
+        result = ["--no-restrict-pivots", "--use-soi", "--new-prop"]
+    elif logic == "QF_NIA":
+        result = ["--nl-ext-tplanes"]
+    elif logic == "UFBV":
+        result = ["--finite-model-find"]
+    elif logic == "BV":
+        result = ["--full-saturate-quant", "--decision=internal"]
+    elif logic in ["LIA", "LRA", "NIA", "NRA"]:
+        result = ["--full-saturate-quant", "--cegqi-nested-qe", "--decision=internal"]
+    elif not logic.startswith("QF_"):
+        result = ["--full-saturate-quant", "--fp-exp"]
+    elif logic == "QF_AUFBV":
+        result = ["--decision=stoponly"]
+    elif logic == "QF_ABV":
+        result = ["--arrays-weak-equiv"]
+    elif logic in ["QF_AUFLIA", "QF_AUFNIA"]:
+        result = ["--no-arrays-eager-index", "--arrays-eager-lemmas", "--decision=justification"]
+    elif logic == "QF_AX":
+        result = ["--no-arrays-eager-index", "--arrays-eager-lemmas", "--decision=internal"]
+    elif logic == "QF_ALIA":
+        result = ["--no-arrays-eager-index", "--arrays-eager-lemmas", "--decision=stoponly"]
+    elif logic in ["QF_S", "QF_SLIA"]:
+        result = ["--strings-exp"]
+    elif "FP" in logic:
+        result = ["--fp-exp"]
+
     print(f"  Solver options for logic: {result}")
     return result
 
